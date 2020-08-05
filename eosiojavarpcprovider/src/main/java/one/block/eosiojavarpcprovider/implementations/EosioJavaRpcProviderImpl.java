@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.concurrent.TimeoutException;
 
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
@@ -31,7 +34,6 @@ import one.block.eosiojava.models.rpcProvider.response.GetRequiredKeysResponse;
 import one.block.eosiojava.models.rpcProvider.response.PushTransactionResponse;
 import one.block.eosiojava.models.rpcProvider.response.SendTransactionResponse;
 import one.block.eosiojava.models.rpcProvider.response.RPCResponseError;
-import one.block.eosiojavarpcprovider.BuildConfig;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcErrorConstants;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcProviderCallError;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcProviderInitializerError;
@@ -39,6 +41,8 @@ import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+
+import com.rabbitmq.client.*;
 
 //
 // Copyright © 2017-2019 block.one.
@@ -60,6 +64,8 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
     @NotNull
     private IEosioJavaRpcProviderApi rpcProviderApi;
 
+    private EosioJavaRpcAmqpClientImpl eosioJavaRpcAmqpClient;
+
     /**
      * Construct a new RPC provider instance given the base URL to use for building requests.
      * @param baseURL Base URL to use for building requests.
@@ -76,6 +82,17 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
      * @throws EosioJavaRpcProviderInitializerError thrown if the base URL passed in is null.
      */
     public EosioJavaRpcProviderImpl(@NotNull String baseURL, boolean enableDebug) throws EosioJavaRpcProviderInitializerError {
+        this(baseURL, enableDebug, false);
+    }
+
+    /**
+     * Construct a new RPC provider instance given the base URL to use for building requests.
+     * @param baseURL Base URL to use for building requests.
+     * @param enableDebug Enable Network Log at {@link Level#BODY} level
+     * @param enableAmqp Enable AMQP messaging for sendTransaction
+     * @throws EosioJavaRpcProviderInitializerError thrown if the base URL passed in is null.
+     */
+    public EosioJavaRpcProviderImpl(@NotNull String baseURL, boolean enableDebug, boolean enableAmqp) throws EosioJavaRpcProviderInitializerError {
         if(baseURL == null || baseURL.isEmpty()) {
             throw new EosioJavaRpcProviderInitializerError(EosioJavaRpcErrorConstants.RPC_PROVIDER_BASE_URL_EMPTY);
         }
@@ -86,6 +103,9 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor();
             httpLoggingInterceptor.setLevel(Level.BODY);
             httpClient.addInterceptor(httpLoggingInterceptor);
+        }
+        if (enableAmqp) {
+            this.eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl();
         }
 
         this.retrofit = new Retrofit.Builder()
@@ -221,6 +241,8 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         }
     }
 
+    private final static String QUEUE_NAME = "hello";
+
     /**
      * Send a given transaction to the blockchain and process the response.
      * @param sendTransactionRequest the transaction to send with signatures.
@@ -228,13 +250,27 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
      * @throws SendTransactionRpcError Thrown if any errors occur calling or processing the request.
      */
     public @NotNull SendTransactionResponse sendTransaction(
-            SendTransactionRequest sendTransactionRequest) throws PushTransactionRpcError {
-        try {
-            Call<SendTransactionResponse> syncCall = this.rpcProviderApi.sendTransaction(sendTransactionRequest);
-            return processCall(syncCall);
-        } catch (Exception ex) {
-            throw new SendTransactionRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_SENDING_TRANSACTION,
-                    ex);
+            SendTransactionRequest sendTransactionRequest) throws SendTransactionRpcError {
+        if (sendTransactionRequest.getIsAmqpRequest()) {
+            // Send to AMQP
+            try {
+                String response = this.eosioJavaRpcAmqpClient.call("something");
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // Return SendTransactionResponse or some generic
+            return null;
+        } else {
+            try {
+                Call<SendTransactionResponse> syncCall = this.rpcProviderApi.sendTransaction(sendTransactionRequest);
+                return processCall(syncCall);
+            } catch (Exception ex) {
+                throw new SendTransactionRpcError(EosioJavaRpcErrorConstants.RPC_PROVIDER_ERROR_SENDING_TRANSACTION,
+                        ex);
+            }
         }
     }
 
