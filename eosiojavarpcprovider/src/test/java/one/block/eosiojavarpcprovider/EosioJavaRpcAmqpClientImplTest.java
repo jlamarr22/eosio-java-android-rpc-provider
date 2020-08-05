@@ -15,10 +15,11 @@ public class EosioJavaRpcAmqpClientImplTest {
 
     @Test
     public void test() {
+        String exchangeName = "";
         String requestQueueName = "rpc_queue";
         String replyToQueueName = "rpc_queue";
         String hostName = "localhost";
-        AMQPConfig config = new AMQPConfig(requestQueueName, replyToQueueName, hostName);
+        AMQPConfig config = new AMQPConfig(exchangeName, requestQueueName, replyToQueueName, hostName);
         eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl(config);
 
         List<String> results = new ArrayList<>();
@@ -30,8 +31,6 @@ public class EosioJavaRpcAmqpClientImplTest {
             }
             String test = "";
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

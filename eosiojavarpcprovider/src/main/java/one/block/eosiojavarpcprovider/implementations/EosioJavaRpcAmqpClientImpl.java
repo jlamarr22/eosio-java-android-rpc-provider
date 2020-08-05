@@ -8,10 +8,6 @@ import com.rabbitmq.client.ConnectionFactory;
 
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -25,8 +21,7 @@ public class EosioJavaRpcAmqpClientImpl {
         this.amqpConfig = amqpConfig;
     }
 
-    public String call(String message) throws IOException, InterruptedException {
-        final String corrId = UUID.randomUUID().toString();
+    public String call(String message) throws IOException {
         AtomicReference<String> result = new AtomicReference<>();
 
         ConfirmCallback messageConfirmedCallback = (sequenceNumber, multiple) -> {
@@ -37,6 +32,7 @@ public class EosioJavaRpcAmqpClientImpl {
         ConfirmCallback messageRejectedCallback = (sequenceNumber, multiple) -> {
             // Message rejected/nacked
             System.out.println("message was nacked/rejected");
+            result.set("rejected");
         };
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -45,13 +41,12 @@ public class EosioJavaRpcAmqpClientImpl {
         try (Connection connection = factory.newConnection(); Channel channel = connection.createChannel()) {
             AMQP.BasicProperties props = new AMQP.BasicProperties
                     .Builder()
-                    .correlationId(corrId)
                     .replyTo(channel.queueDeclare().getQueue()) // this.amqpConfig.getReplyToQueueName() // Only know at runtime?
                     .build();
 
             channel.confirmSelect();
             channel.addConfirmListener(messageConfirmedCallback, messageRejectedCallback);
-            channel.basicPublish("", this.amqpConfig.getRequestQueueName(), props, message.getBytes("UTF-8"));
+            channel.basicPublish(this.amqpConfig.getExchangeName(), this.amqpConfig.getRequestQueueName(), props, message.getBytes("UTF-8"));
 
             // Naive wait for result to be available
             while(true) {

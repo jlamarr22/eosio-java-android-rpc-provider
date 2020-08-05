@@ -6,6 +6,11 @@ package one.block.eosiojavarpcprovider.toBeMoved;
 public class AMQPConfig {
 
     /**
+     * The exchange
+     */
+    private String exchangeName;
+
+    /**
      * The request queue name.
      */
     private String requestQueueName;
@@ -27,10 +32,29 @@ public class AMQPConfig {
      * @param replyToQueueName the replyToQueueName
      * @param hostName the hostName
      */
-    public AMQPConfig(String requestQueueName, String replyToQueueName, String hostName) {
+    public AMQPConfig(String exchangeName, String requestQueueName, String replyToQueueName, String hostName) {
+        this.setExchangeName(exchangeName);
         this.setRequestQueueName(requestQueueName);
         this.setReplyToQueueName(replyToQueueName);
         this.setHostName(hostName);
+    }
+
+    /**
+     * Gets exchangeName.
+     *
+     * @return the exchangeName
+     */
+    public String getExchangeName() {
+        return this.exchangeName;
+    }
+
+    /**
+     * Sets exchangeName.
+     *
+     * @param exchangeName the exchangeName
+     */
+    public void setExchangeName(String exchangeName) {
+        this.exchangeName = exchangeName;
     }
 
     /**

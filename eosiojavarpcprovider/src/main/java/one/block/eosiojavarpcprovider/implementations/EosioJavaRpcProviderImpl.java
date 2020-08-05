@@ -107,7 +107,7 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
         }
         if (enableAmqp) {
             // TODO::Need to inject config
-            AMQPConfig config = new AMQPConfig("", "", "");
+            AMQPConfig config = new AMQPConfig("", "", "", "");
             this.eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl(config);
         }
 
@@ -259,8 +259,6 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             try {
                 String response = this.eosioJavaRpcAmqpClient.call("something");
             } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
