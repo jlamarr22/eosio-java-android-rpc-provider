@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import one.block.eosiojavarpcprovider.implementations.EosioJavaRpcAmqpClientImpl;
+import one.block.eosiojavarpcprovider.toBeMoved.AMQPConfig;
 
 public class EosioJavaRpcAmqpClientImplTest {
 
@@ -12,7 +13,11 @@ public class EosioJavaRpcAmqpClientImplTest {
 
     @Test
     public void test() {
-        eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl();
+        String requestQueueName = "";
+        String replyToQueueName = "";
+        String hostName = "";
+        AMQPConfig config = new AMQPConfig(requestQueueName, replyToQueueName, hostName);
+        eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl(config);
 
         try {
             String result = eosioJavaRpcAmqpClient.call("10");

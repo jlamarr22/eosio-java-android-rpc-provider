@@ -15,14 +15,18 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import one.block.eosiojavarpcprovider.toBeMoved.AMQPConfig;
+
 public class EosioJavaRpcAmqpClientImpl implements AutoCloseable {
     private Connection connection;
     private Channel channel;
-    private String requestQueueName = "rpc_queue";
+    private AMQPConfig amqpConfig;
 
-    public EosioJavaRpcAmqpClientImpl() {
+
+    public EosioJavaRpcAmqpClientImpl(AMQPConfig amqpConfig) {
+        this.amqpConfig = amqpConfig;
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        factory.setHost(this.amqpConfig.getHostName());
 
         try {
             connection = factory.newConnection();
@@ -38,7 +42,11 @@ public class EosioJavaRpcAmqpClientImpl implements AutoCloseable {
         final String corrId = UUID.randomUUID().toString();
         AtomicReference<String> result = new AtomicReference<>();
 
-        channel.queueDeclare(requestQueueName, false, false, false, null);
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(corrId)
+                .replyTo(this.amqpConfig.getReplyToQueueName())
+                .build();
 
         channel.confirmSelect();
 
@@ -54,7 +62,8 @@ public class EosioJavaRpcAmqpClientImpl implements AutoCloseable {
 
         channel.addConfirmListener(messageConfirmedCallback, messageRejectedCallback);
 
-        channel.basicPublish("", requestQueueName, null, message.getBytes("UTF-8"));
+        channel.basicPublish("", this.amqpConfig.getRequestQueueName(), props, message.getBytes("UTF-8"));
+        //channel.basicPublish("", requestQueueName, props, message.getBytes("UTF-8"));
 
 //        final BlockingQueue<String> response = new ArrayBlockingQueue<>(1);
 //
@@ -65,12 +74,12 @@ public class EosioJavaRpcAmqpClientImpl implements AutoCloseable {
 //        }, consumerTag -> {
 //        });
 //
-//        String result = response.take();
+//        String result1 = response.take();
 //        channel.basicCancel(ctag);
 
-        // Wait for a response from the server
+        // Naive wait for result to be available
         while(true) {
-            if (result != null) {
+            if (result != null && result.get() != null) {
                 break;
             }
         }

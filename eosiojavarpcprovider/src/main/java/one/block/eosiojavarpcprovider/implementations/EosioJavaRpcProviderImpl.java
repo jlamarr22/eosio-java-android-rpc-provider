@@ -37,6 +37,7 @@ import one.block.eosiojava.models.rpcProvider.response.RPCResponseError;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcErrorConstants;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcProviderCallError;
 import one.block.eosiojavarpcprovider.error.EosioJavaRpcProviderInitializerError;
+import one.block.eosiojavarpcprovider.toBeMoved.AMQPConfig;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -105,7 +106,9 @@ public class EosioJavaRpcProviderImpl implements IRPCProvider {
             httpClient.addInterceptor(httpLoggingInterceptor);
         }
         if (enableAmqp) {
-            this.eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl();
+            // TODO::Need to inject config
+            AMQPConfig config = new AMQPConfig("", "", "");
+            this.eosioJavaRpcAmqpClient = new EosioJavaRpcAmqpClientImpl(config);
         }
 
         this.retrofit = new Retrofit.Builder()
